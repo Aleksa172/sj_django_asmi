@@ -26,13 +26,17 @@ def index(request):
     return render(request, 'game_index.html', {'games_list': games_list, 'user_games_list': user_games_list})
 
 def games_details(request, game_id):
-    game = Game.objects.get(id=game_id)
-    # Jednostavnija varijanta od indexa, jer je uvek jedna igra u pitanju
+    # Ako igre nema, baci 404
+    try:
+        game = Game.objects.get(id=game_id)
+    except Game.DoesNotExist:
+        return render(request, '404.html')
+    
+    # Jednostavnija varijanta od games_indexa, jer je uvek jedna igra u pitanju
     user_has_game = False
     if request.user.is_authenticated:
         user_has_game = request.user.playeruser.games.filter(id=game_id).exists()
 
-    
     try:
         news_list = News.objects.filter(game_id=game_id)
         if len(news_list) == 0:
@@ -43,7 +47,10 @@ def games_details(request, game_id):
     return render(request, 'game_details.html', {'game': game, 'news_list': news_list, 'user_has_game': user_has_game})
 
 def news_details(request, broj):
-    news = News.objects.get(id=broj)
+    try:
+        news = News.objects.get(id=broj)
+    except News.DoesNotExist:
+        return render(request, '404.html')
 
     return render(request, 'news_details.html', {'news': news})
 
@@ -169,7 +176,7 @@ def custom_register(request):
             data = form.cleaned_data
             enc_pass = make_password(data["password"])
             username = data["username"]
-            newu = User.objects.create(username=data["username"], password=enc_pass)
+            newu = User.objects.create(username=username, password=enc_pass)
             newu.save()
             success_message = "Your have successfully registered! Please feel free to login with your new account." 
             return render(request, 'registration/register.html', {'form': form, 'success_message': success_message})
@@ -243,8 +250,8 @@ def player_profile_achievements(request, usr_id, game_id):
 def list_profiles(request):
     search = None
 
-    if request.method == "GET" and request.GET['search'] is not None:
-        search = request.GET['search']
+    if request.method == "GET" and request.GET.get('search',None) is not None:
+        search = request.GET.get('search')
 
     if request.user.is_authenticated:
         # Vrati listu bez mene
